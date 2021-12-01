@@ -42,9 +42,9 @@
         console.log(rowToAdd);
     }
     function completeDelete(row_data){
-        console.log(row_data.split('_')[1])
+        console.log(row_data.split('_')[0])
         console.log(row_data)
-        let backendUrl = 'http:localhost:8080';
+        let backendUrl = 'http://24.167.170.83:8080';
         if (row_data.split('_')[0] == 'patient'){
             let response = httpGet(backendUrl +"/patients/delete/" + row_data.split('_')[1])
             // if (response == 'Success'){
@@ -52,7 +52,17 @@
             // }
         }
         else if (row_data.split('_')[0] == 'allergy'){
-
+            let response = httpGet(backendUrl +"/allergy/delete/" + row_data.split('_')[1])
+        }
+        else if (row_data.split('_')[0] == 'vaccine'){
+            let response = httpGet(backendUrl +"/vaccine/delete/" + row_data.split('_')[1])
+        }
+        else if (row_data.split('_')[0] == 'vaccination'){
+            console.log('herehere' + row_data)
+            let response = httpGet(backendUrl +"/vaccination_site/delete/" + row_data.split('_')[2])
+            if (response == 'failure'){
+                document.getElementById('body_id').innerHTML += 'FAILURE';
+            }
         }
     }
     function addTableRowsDelete(row_data, table_id, row_type){
@@ -70,12 +80,11 @@
                     id = 'takes_' + row_data.patient_id + '_' + row_data.site_name + '_' + row_data.scient_name;
                 }
                 else if (row_type == 'vaccination_site_name'){
-                    id = 'vaccination_site' + row_type.name;
+                    id = 'vaccination_site_' + row_data.name;
                 }
-            console.log('IIIIIIIDDDDDDDDDDDDDDDDDDDDDDDDD' + id)    
         
         var rowToAdd = '<tr>';
-            console.log('in addTableRowsDelete ::::::::: ' + this)
+
             if (!row_data.length){
                 Object.keys(row_data).forEach((key) => {
                     rowToAdd += '<td>' + row_data[key] + '</td>'
@@ -177,7 +186,7 @@
             }
         }       
     function loadTableData(page) {
-        let backendUrl = 'http:localhost:8080';
+        let backendUrl = 'http://24.167.170.83:8080';
         console.log('loadTableData ::::' + page)
         if (page == 'patients') {
             let patientsList = JSON.parse(httpGet(backendUrl +"/patients/all"));
@@ -258,7 +267,7 @@
         document.getElementById("patient_table").innerHTML = '<table style="width:100%" id="patient_table" onload="loadTableData()" >' + 
             '<tr> <th>id</th> <th>f_name</th> <th>m_initial</th> <th>l_name</th> <th>dob</th> <th>weight</th> </tr> </table>' +
         ' </tr>' 
-        let chunkedPatients = splitArrayIntoChunksOfLen(JSON.parse(httpGet("http:localhost:8080/patients/all")),30);
+        let chunkedPatients = splitArrayIntoChunksOfLen(JSON.parse(httpGet("http://24.167.170.83:8080/patients/all")),30);
         console.log(chunkedPatients)
         
         let pageNumber = parseInt(page);
@@ -289,11 +298,13 @@
         clearPage();
         document.getElementById('searchbar').style.display = 'block'
         const elements = document.getElementsByClassName('table_element');
-        elements[0].innerHTML =''
+        // if (elements[0].innerHTML) {
+        //     elements[0].innerHTML =''
+        // }
         console.log(elements[0])
     }
     function completeSearch(){
-        let backendUrl = 'http:localhost:8080';
+        let backendUrl = 'http://24.167.170.83:8080';
         if (document.getElementById('search_table')) document.getElementById('search_table').innerHTML = '';
         if (document.getElementById('search_select').value == 'patients_id'){
             console.log('RUNNING')
@@ -314,13 +325,34 @@
             searchTable.innerHTML += tableHeaders(['patient_id', 'allergy', 'delete']);
             addTableRowsDelete(allergyList, searchTable.id, 'allergy_allergy');
         }
+        else if (document.getElementById('search_select').value == 'vaccine_scient_name') {
+            let allergyList = JSON.parse(httpGet(backendUrl +"/vaccine/" + document.getElementById('query_value').value))
+            let searchTable = document.getElementById('search_table');
+            searchTable.style.display = 'block';
+            searchTable.innerHTML += tableHeaders(['scient_name', 'disease', 'no_doses']);
+            addTableRowsDelete(allergyList, searchTable.id, 'vaccine_scient_name');
+        }
+        else if (document.getElementById('search_select').value == 'takes_name') {
+            let allergyList = JSON.parse(httpGet(backendUrl +"/takes/" + document.getElementById('query_value').value))
+            let searchTable = document.getElementById('search_table');
+            searchTable.style.display = 'block';
+            searchTable.innerHTML += tableHeaders(['patient_id', 'site_name', 'scient_name']);
+            addTableRowsDelete(allergyList, searchTable.id, 'takes_name');
+        }
+        else if (document.getElementById('search_select').value == 'vaccination_site_name') {
+            let allergyList = JSON.parse(httpGet(backendUrl +"/vaccination_site/" + document.getElementById('query_value').value))
+            let searchTable = document.getElementById('search_table');
+            searchTable.style.display = 'block';
+            searchTable.innerHTML += tableHeaders(['name', 'addr_street', 'addr_city', 'addr_state', 'addr_zip']);
+            addTableRowsDelete(allergyList, searchTable.id, 'vaccination_site_name');
+        }
     }
     function sendInsert(table_type){
         if (table_type == 'patient_submit_insert'){
             let data = {"id" : document.getElementById('id_insert').value, "f_name" : document.getElementById('fname_insert').value, "l_name" : 
             document.getElementById('lname_insert').value, "m_initial" : document.getElementById('minitial_insert').value, "dob" : document.getElementById('dob_insert').value, 
             "weight" : document.getElementById('weight_insert').value   }
-            sendPost(data, 'http://localhost:8080/patients/insert');
+            sendPost(data, 'http://24.167.170.83:8080/patients/insert');
         }
     }
     function createInsertTable(table_type){
@@ -354,7 +386,16 @@
             '<button type="button" onClick="createInsertTable(\'takes\')">takes</button>'   +
             '<button type="button" onClick="createInsertTable(\'vaccination_site\')">vaccination_site</button> </div>'
     }
-      
+    
+    function loadUpdate(){
+        clearPage();
+        document.getElementById('body_id').innerHTML += '<div id="insert_button_div"> UPDATE ' +
+            '<button type="button" onClick="createInsertTable(\'patient\')">patient</button>' +
+            '<button type="button" onClick="createInsertTable(\'allergy\')">allergy</button>' +
+            '<button type="button" onClick="createInsertTable(\'vaccine\')">vaccine</button>' +
+            '<button type="button" onClick="createInsertTable(\'takes\')">takes</button>'   +
+            '<button type="button" onClick="createInsertTable(\'vaccination_site\')">vaccination_site</button> </div>'
+    }
 
     
    </script>
@@ -458,6 +499,7 @@ table, th, td {
   &nbsp
   <a href="#search"id="vaccination_site" onClick="loadSearch()">search</a>
   <a href="#insert"id="insert_button" onclick="loadInsert()" >insert</a> 
+  <a href="#insert"id="update_button" onclick="loadUpdate()" >update</a> 
   <!-- onClick="loadSearch() -->
 </div>
 
@@ -471,7 +513,7 @@ table, th, td {
                 <option value="patients_id">Patients (id)</option>
                 <option value="allergy_allergy">Allergy (allergy)</option>
                 <option value="vaccine_scient_name">Vaccine (scient_name)</option>
-                <option value="takes_name">Takes (name)</option>
+                <option value="takes_name">Takes (scient_name)</option>
                 <option value="vaccination_site_name">vaccination_site (name)</option>
                 vaccination_site
               </select>
