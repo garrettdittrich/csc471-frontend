@@ -10,6 +10,17 @@
         xmlHttp.send( null );
         return xmlHttp.responseText;
     }
+    function sendPost(val, url){
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        console.log(JSON.stringify(
+            val
+        ))
+        xhr.send(JSON.stringify(
+            val
+        ));
+    }
 
     function addTableRows(row_data, table_id){
         let rowToAdd = '<tr>';
@@ -36,7 +47,9 @@
         let backendUrl = 'http:localhost:8080';
         if (row_data.split('_')[0] == 'patient'){
             let response = httpGet(backendUrl +"/patients/delete/" + row_data.split('_')[1])
-            console.log(response)
+            // if (response == 'Success'){
+            //     document.getElementById('search_table').innerHTML = '';
+            // }
         }
         else if (row_data.split('_')[0] == 'allergy'){
 
@@ -44,6 +57,22 @@
     }
     function addTableRowsDelete(row_data, table_id, row_type){
         let id;
+        if (row_type == 'patients_id') {
+                    id = 'patient_' + row_data.id;
+                }
+                else if (row_type == 'allergy_allergy'){
+                    id = 'allergy_' + row_data[0].allergy + '_' + row_data[0].patient_id
+                }
+                else if (row_type == 'vaccine_scient_name') {
+                    id = 'vaccine_' + row_data.scient_name
+                }
+                else if (row_type == 'takes_name'){
+                    id = 'takes_' + row_data.patient_id + '_' + row_data.site_name + '_' + row_data.scient_name;
+                }
+                else if (row_type == 'vaccination_site_name'){
+                    id = 'vaccination_site' + row_type.name;
+                }
+            console.log('IIIIIIIDDDDDDDDDDDDDDDDDDDDDDDDD' + id)    
         
         var rowToAdd = '<tr>';
             console.log('in addTableRowsDelete ::::::::: ' + this)
@@ -51,19 +80,16 @@
                 Object.keys(row_data).forEach((key) => {
                     rowToAdd += '<td>' + row_data[key] + '</td>'
                 })
-                if (row_type == 'patients_id') {
-                    id = 'patient_' + row_data.id;
-                }
-                else if (row_type == 'allergy_allergy'){
-                    id = 'allergy_' + row_data[0] + '_' + rowdata[1]
-                }
+                
                 rowToAdd += ' <td> <button type="button" id="' + id + '" onClick="completeDelete(this.id)">delete</button> </td>';
             }
             else {
                 for (let i =0; i < row_data.length; i++){
                     Object.keys(row_data[i]).forEach((key) => {
                     rowToAdd += '<td>' + row_data[i][key] + '</td>'
+                    
                     })
+                    rowToAdd += ' <td> <button type="button" id="' + id + '" onClick="completeDelete(this.id)">delete</button> </td>';
                 }
             }
             rowToAdd += '</tr>';
@@ -82,18 +108,27 @@
         if (document.getElementById("patient_table")) {
             document.getElementById("patient_table").remove();
         }
-        else if (document.getElementById("allergy_table")) {
+        if (document.getElementById("allergy_table")) {
             document.getElementById("allergy_table").remove();
         }
-        else if (document.getElementById("vaccine_table")) {
+        if (document.getElementById("vaccine_table")) {
             document.getElementById("vaccine_table").remove();
         }
-        else if (document.getElementById("vaccination_site_table")) {
+        if (document.getElementById("vaccination_site_table")) {
             document.getElementById("vaccination_site_table").remove();
         }
-        else if (document.getElementById('takes_table')) {
+        if (document.getElementById('takes_table')) {
             document.getElementById('takes_table').remove();
         }
+        if (document.getElementById('insert_table')){
+            document.getElementById('insert_table').remove();
+        }
+        if (document.getElementById('insert_button_div')) {
+            document.getElementById('insert_button_div').remove();
+        }
+        if (document.getElementById('submit_insert')) {
+            document.getElementById('submit_insert').remove();
+        }  
         document.getElementById('searchbar').style.display = 'none';
         if (document.getElementById('search_table')){
             let searchTable = document.getElementById('search_table')
@@ -242,8 +277,16 @@
         loadTable(page);
         
     }
-
+    function tableHeaders(headers){
+        let val = '<tr>'
+        for (let i =0; i < headers.length; i++ ){
+            val += '<td>' + headers[i] + '</td>'
+        }
+        val += '</tr>';
+        return val;
+    }
     function loadSearch(){
+        clearPage();
         document.getElementById('searchbar').style.display = 'block'
         const elements = document.getElementsByClassName('table_element');
         elements[0].innerHTML =''
@@ -251,27 +294,75 @@
     }
     function completeSearch(){
         let backendUrl = 'http:localhost:8080';
+        if (document.getElementById('search_table')) document.getElementById('search_table').innerHTML = '';
         if (document.getElementById('search_select').value == 'patients_id'){
             console.log('RUNNING')
             
             let patientsList = JSON.parse(httpGet(backendUrl +"/patients/" + document.getElementById('query_value').value)) 
-            console.log(patientsList );
             let searchTable = document.getElementById('search_table');
             searchTable.style.display = 'block';
             searchTable.innerHTML += '<tr> <td> id </td>  <td> f_name </td> <td> m_initial </td> <td>l_name </td> <td> dob </td> <td> weight </td> <td> </td> </tr>'
             addTableRowsDelete(patientsList, searchTable.id, 'patients_id')
         }
-        else if (document.getElementById('search_select').value == 'allergy_allergy') {
-            let allergyList = JSON.parse(httpGet(backendUrl +"/patients/" + document.getElementById('query_value').value))
+        // else if (document.getElementById('search_select').value == 'allergy_allergy'){
             
+        // }
+        else if (document.getElementById('search_select').value == 'allergy_allergy') {
+            let allergyList = JSON.parse(httpGet(backendUrl +"/allergy/" + document.getElementById('query_value').value))
+            let searchTable = document.getElementById('search_table');
+            searchTable.style.display = 'block';
+            searchTable.innerHTML += tableHeaders(['patient_id', 'allergy', 'delete']);
+            addTableRowsDelete(allergyList, searchTable.id, 'allergy_allergy');
         }
     }
-      
+    function sendInsert(table_type){
+        if (table_type == 'patient_submit_insert'){
+            let data = {"id" : document.getElementById('id_insert').value, "f_name" : document.getElementById('fname_insert').value, "l_name" : 
+            document.getElementById('lname_insert').value, "m_initial" : document.getElementById('minitial_insert').value, "dob" : document.getElementById('dob_insert').value, 
+            "weight" : document.getElementById('weight_insert').value   }
+            sendPost(data, 'http://localhost:8080/patients/insert');
+        }
+    }
+    function createInsertTable(table_type){
+        if (document.getElementById('insert_table')){
+            document.getElementById('insert_table').remove()
+        }
+        if (document.getElementById('submit_insert')){
+            document.getElementById('submit_insert').remove();
+        }
+        let data_add = '<table style="width:100%" class="table_element" id="insert_table"> ';
+        if (table_type == 'patient') {
+            data_add += tableHeaders(['id', 'f_name', 'm_initial', 'l_name', 'dob', 'weight']);
+            data_add += '<tr> <td> <input type="number" id="id_insert" name="fname"> </td>' +
+                '<td> <input type="text" id="fname_insert" name="fname"> </td>' +
+                '<td> <input type="text" id="minitial_insert" name="fname"> </td>' +
+                '<td> <input type="text" id="lname_insert" name="fname"> </td>' +
+                '<td> <input type="date" id="dob_insert" name="fname"> </td>' +
+                '<td> <input type="number" min="1900-01-01" max="2021-11-30" id="weight_insert" name="fname"> </td>' +
+                '</tr> '
+                
+        }
+        data_add += '</table <br> <button id="submit_insert" onClick="sendInsert(\'patient_submit_insert\')" type="button"> Insert </button>'
+        document.getElementById('body_id').innerHTML += data_add
+    }
+    function loadInsert(){
+        clearPage();
+        document.getElementById('body_id').innerHTML += '<div id="insert_button_div"> INSERT ' +
+            '<button type="button" onClick="createInsertTable(\'patient\')">patient</button>' +
+            '<button type="button" onClick="createInsertTable(\'allergy\')">allergy</button>' +
+            '<button type="button" onClick="createInsertTable(\'vaccine\')">vaccine</button>' +
+            '<button type="button" onClick="createInsertTable(\'takes\')">takes</button>'   +
+            '<button type="button" onClick="createInsertTable(\'vaccination_site\')">vaccination_site</button> </div>'
+    }
       
 
     
    </script>
 <style>
+#submit_insert {
+    height: 50px;
+    width: 50px
+}
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
@@ -361,9 +452,13 @@ table, th, td {
   <a href="#allergy" id="allergy" onClick="navigate(this.id)">allergy</a>
   <a href="#vaccine" id="vaccine" onClick="navigate(this.id)">vaccine</a>
   <a href="#takes" id="takes" onClick="navigate(this.id)">takes</a>
-  <a href="#vaccination_site"id="vaccination_site" onClick="loadSearch()">vaccination_site</a>
+  <a href="#vaccination_site"id="vaccination_site" onClick="navigate(this.id)">vaccination_site</a>
+  &nbsp
+  &nbsp
   &nbsp
   <a href="#search"id="vaccination_site" onClick="loadSearch()">search</a>
+  <a href="#insert"id="insert_button" onclick="loadInsert()" >insert</a> 
+  <!-- onClick="loadSearch() -->
 </div>
 
 <div class="bottom_navbar" id="bottom_navbar"> </div>
